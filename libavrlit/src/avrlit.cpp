@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../avrlit.h"
+#include "avrlit.h"
+
+#include "protocol.h"
 
 #include <stdlib.h>
 #include <avr/wdt.h>
@@ -35,6 +37,14 @@ ostream::print(pstr const& str) {
   for (char c = pgm_read_byte(s++); c != '\0'; c = pgm_read_byte(s++)) {
     CDC_Device_SendByte(cdc_, c);
   }
+}
+
+u8 ostream::read_byte() {
+  return CDC_Device_ReceiveByte(&cdc);
+}
+
+void ostream::write_byte(u8 value) {
+  CDC_Device_SendByte(cdc_, value);
 }
 
 ostream get_cdc_stream() { return ostream((ostream::USB_ClassInfo_CDC_Device_t*)&cdc); }

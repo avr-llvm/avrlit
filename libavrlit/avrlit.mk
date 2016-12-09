@@ -4,10 +4,12 @@ ARCH         = AVR8
 OPTIMIZATION = s
 TARGET       = avrlit
 LUFA_PATH    = ../lufa/LUFA
-SRC          = ../src/avrlit.cpp ../src/usb.c $(LUFA_SRC_USB_DEVICE) \
+SRC          = ../src/avrlit.cpp \
+							 ../src/protocol.cpp \
+							 ../src/usb.c $(LUFA_SRC_USB_DEVICE) \
                $(LUFA_PATH)/Drivers/USB/Class/Device/CDCClassDevice.c
 CC_FLAGS     = -I../src -DUSE_LUFA_CONFIG_HEADER
-CPP_FLAGS    = 
+CPP_FLAGS    =
 CPP_STANDARD = c++11
 LD_FLAGS     =
 OBJDIR       = _build

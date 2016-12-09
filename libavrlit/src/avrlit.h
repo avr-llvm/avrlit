@@ -39,7 +39,10 @@ class ostream {
 
     void print(char const* str);
     void print(pstr const& str);
-    
+
+    u8 read_byte();
+    void write_byte(u8 value);
+
   private:
     USB_ClassInfo_CDC_Device_t * cdc_;
 };
