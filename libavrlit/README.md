@@ -12,11 +12,7 @@ are printed in a format similar to `llvm-lit`.
 
 ### Installation
 
-To avoid clutter the current library binary is checked in. To build the library
-the LUFA library is required:
-
 ````
-> git clone https://github.com/abcminiuser/lufa.git
 > make
 ````
 
