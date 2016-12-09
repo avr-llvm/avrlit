@@ -1,9 +1,11 @@
+cmake_minimum_required(VERSION 3.2)
+
 if (WIN32 AND NOT CYGWIN)
   # The script needs suffix.py for multiprocess to find a main module.
   set(suffix .py)
 endif ()
 
-set(llvm_avrlit_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-avrlit${suffix})
+set(llvm_avrlit_path ${CMAKE_BINARY_DIR}/llvm-avrlit${suffix})
 
 if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
   foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
