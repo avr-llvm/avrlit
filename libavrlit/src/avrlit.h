@@ -43,6 +43,10 @@ class ostream {
     u8 read_byte();
     void write_byte(u8 value);
 
+    u16 read_u16();
+    u32 read_u32();
+    u64 read_u64();
+
   private:
     USB_ClassInfo_CDC_Device_t * cdc_;
 };

@@ -15,7 +15,7 @@ namespace avrlit
 {
 
 //! A number identifying a type.
-enum TypeId {
+enum TypeId : u8 {
   TypeI8 = 0,
   TypeI16 = 1,
   TypeI32 = 2,
@@ -23,16 +23,16 @@ enum TypeId {
 };
 
 //! A type that can be sent over the wire.
-struct Type
+struct Value
 {
-  TypeId id;
+  TypeId typeId;
 
   union { uint8_t value; } I8;
   union { uint16_t value; } I16;
   union { uint32_t value; } I32;
   union { uint64_t value; } I64;
 
-  Type Read(avrlit::ostream &stream);
+  static Value Read(avrlit::ostream &stream);
 };
 
 }

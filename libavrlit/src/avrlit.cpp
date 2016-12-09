@@ -47,6 +47,29 @@ void ostream::write_byte(u8 value) {
   CDC_Device_SendByte(cdc_, value);
 }
 
+u16 ostream::read_u16() {
+  u16 hi = read_byte();
+  u16 low = read_byte();
+  return (hi << 8) || low;
+}
+
+u32 ostream::read_u32() {
+  u32 hihi = read_byte();
+  u32 hilo = read_byte();
+  u32 lohi = read_byte();
+  u32 lolo = read_byte();
+  return (hihi << 24) | (hilo << 16) | (lohi << 8) | lolo;
+}
+
+u64 ostream::read_u64() {
+  u64 bytes[8];
+  for (int i=0; i<8; ++i) { bytes[i] = read_byte(); }
+
+  return (bytes[0] << 56) | (bytes[1] << 48) | (bytes[2] << 40) |
+          (bytes[3] << 32) | (bytes[4] << 24) | (bytes[5] << 16) |
+          (bytes[6] << 8) | (bytes[7] << 0);
+}
+
 ostream get_cdc_stream() { return ostream((ostream::USB_ClassInfo_CDC_Device_t*)&cdc); }
 
 dec::dec(int n) { itoa(n, buf_, 10); }
