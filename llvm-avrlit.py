@@ -20,6 +20,7 @@ llvm_root = "@LLVM_SOURCE_DIR@"
 avrlit_dir = os.path.join(llvm_root, "utils", "AVR", "avrlit", "libavrlit")
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
+parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
 
 class Config:
   board = ''
@@ -28,6 +29,7 @@ class Config:
   llc = 'llc'
   ld = "avr-gcc"
   output_dir = "/tmp/avrlit"
+  enableReset = True
 
 #=== Build Test Executable ------------------------------------------------===#
 
@@ -101,7 +103,9 @@ def resetLeonardo(config):
   waitWhilePortExists(config.port)
 
 def uploadLeonardo(executable, config):
-  resetLeonardo(config)
+  if config.enableReset:
+      resetLeonardo(config)
+
   waitUntilPortExists(config.port)
   runCommand("avrdude", ['-patmega32u4', '-cavr109',
                          '-P', config.port, '-b57600', '-q', '-q',
@@ -162,6 +166,10 @@ config.board = os.environ['AVRLIT_BOARD'] if 'AVRLIT_BOARD' in os.environ else '
 config.mcu = 'atmega32u4'
 config.llc = "/Users/dylan/projects/builds/llvm/bin/llc"
 config.output_dir = "/tmp/avrlit"
+
+if opts.disable_reset:
+  config.enableReset = False
+  print "disabling serial reset"
 
 # Ensure the output directory exists.
 if not os.path.exists(config.output_dir):
