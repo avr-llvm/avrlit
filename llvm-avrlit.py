@@ -11,6 +11,7 @@
 
 POLL_DELAY = 0.1
 MAX_RETRIES = 100
+AVRLIT_BAUD = 9600
 
 import sys, os, textwrap, subprocess, time, serial
 from optparse import OptionParser, OptionGroup
@@ -28,6 +29,7 @@ class Config:
   port = ''
   llc = 'llc'
   ld = "avr-gcc"
+  programmer = 'arduino'
   output_dir = "/tmp/avrlit"
   enableReset = True
 
@@ -102,25 +104,27 @@ def resetLeonardo(config):
   serial.Serial(config.port, 1200).close()
   time.sleep(1)
 
-def uploadLeonardo(executable, config):
+def upload(executable, config):
   if config.enableReset:
     resetLeonardo(config)
 
   waitUntilPortExists(config.port)
-  runCommand("avrdude", ['-patmega32u4', '-cavr109',
+  runCommand("avrdude", ['-p' + config.mcu, '-c' + config.programmer,
                          '-P', config.port, '-b57600',
                          '-D', '-Uflash:w:{}:i'.format(executable)])
-  waitWhilePortExists(port)
+
+  if config.enableReset:
+      waitWhilePortExists(port)
 
 #=== Run Executable -------------------------------------------------------===#
 
 def runExecutable(executable, config):
-  uploadLeonardo(executable, config)
+  upload(executable, config)
   waitUntilPortExists(config.port)
   retries = 0
   while True:
     try:
-      test = serial.Serial(config.port, 57600, timeout=1)
+      test = serial.Serial(config.port, AVRLIT_BAUD, timeout=1)
       break
     except (OSError, serial.serialutil.SerialException) as e:
       time.sleep(POLL_DELAY)
@@ -141,10 +145,6 @@ def runExecutable(executable, config):
         done = True
       continue
     print(line)
-    # if line.startswith(b'FAIL:'):
-    #   passed = False
-    # if line == '--':
-    #   done = True
   test.close()
   return passed
 
@@ -163,9 +163,20 @@ if not os.path.exists(port):
 config = Config()
 config.port = port
 config.board = os.environ['AVRLIT_BOARD'] if 'AVRLIT_BOARD' in os.environ else 'leonardo'
-config.mcu = 'atmega32u4'
 config.llc = "/Users/dylan/projects/builds/llvm/bin/llc"
 config.output_dir = "/tmp/avrlit"
+
+# Map board to MCU
+config.mcu = {
+    'leonardo': 'atmega32u4',
+    'nano': 'atmega328p',
+}[config.board]
+
+# Map board to programmer
+config.programmer = {
+    'leonardo': 'avr109',
+    'nano': 'arduino',
+}[config.board]
 
 if opts.disable_reset:
   config.enableReset = False
@@ -175,6 +186,7 @@ if opts.disable_reset:
 if not os.path.exists(config.output_dir):
     os.makedirs(config.output_dir)
 
+# Build the AVRLIT support library
 buildAvrLit()
 
 for file in files:
