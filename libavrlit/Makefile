@@ -1,7 +1,9 @@
+BOARD := nano
+
 all:
-	$(MAKE) -C leonardo
+	$(MAKE) -C $(BOARD)
 
 
 clean:
-	$(MAKE) -C leonardo clean
-	
+	$(MAKE) -C $(BOARD) clean
+
