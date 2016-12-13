@@ -100,15 +100,15 @@ def waitUntilPortExists(port):
 
 def resetLeonardo(config):
   serial.Serial(config.port, 1200).close()
-  waitWhilePortExists(config.port)
+  time.sleep(1)
 
 def uploadLeonardo(executable, config):
   if config.enableReset:
-      resetLeonardo(config)
+    resetLeonardo(config)
 
   waitUntilPortExists(config.port)
   runCommand("avrdude", ['-patmega32u4', '-cavr109',
-                         '-P', config.port, '-b57600', '-q', '-q',
+                         '-P', config.port, '-b57600',
                          '-D', '-Uflash:w:{}:i'.format(executable)])
   waitWhilePortExists(port)
 
@@ -122,7 +122,7 @@ def runExecutable(executable, config):
     try:
       test = serial.Serial(config.port, 57600, timeout=1)
       break
-    except OSError as e:
+    except (OSError, serial.serialutil.SerialException) as e:
       time.sleep(POLL_DELAY)
       retries += 1
       if retries == 5:
@@ -140,7 +140,7 @@ def runExecutable(executable, config):
         passed = False
         done = True
       continue
-    # print(line)
+    print(line)
     # if line.startswith(b'FAIL:'):
     #   passed = False
     # if line == '--':
