@@ -40,15 +40,37 @@ extern "C" {
     return avrlit::SerialImpl::GetCurrent()->receive_byte();
   }
 
-  // Unsigned integer reporting
-  void avrlit_report_result_u8(const char *name, uint8_t result) { reportInteger(name, result); }
-  void avrlit_report_result_u16(const char *name, uint16_t result) { reportInteger(name, result); }
-  void avrlit_report_result_u32(const char *name, uint32_t result) { reportInteger(name, result); }
-  void avrlit_report_result_u64(const char *name, uint64_t result) { reportInteger(name, result); }
+  /// Hooks that are executed by the test program to report results.
+  ///
+  /// The LLVM 'avr-instrument-functions' pass does this automatically.
 
-  // Signed integer reporting
-  void avrlit_report_result_i8(const char *name, int8_t result) { reportInteger(name, result); }
-  void avrlit_report_result_i16(const char *name, int16_t result) { reportInteger(name, result); }
-  void avrlit_report_result_i32(const char *name, int32_t result) { reportInteger(name, result); }
-  void avrlit_report_result_i64(const char *name, int64_t result) { reportInteger(name, result); }
+  void avr_instrumentation_begin_signature(const char *funcName, uint16_t argCount) {
+    avrlit::SerialImpl::GetCurrent()->send(funcName);
+
+    if (argCount == 0) {
+      avrlit::SerialImpl::GetCurrent()->send("()\n");
+    } else {
+      avrlit::SerialImpl::GetCurrent()->send("(\n");
+    }
+  }
+
+  void avr_instrumentation_end_signature(const char *funcName, uint16_t argCount) {
+    if (argCount != 0) {
+      avrlit::SerialImpl::GetCurrent()->send(")\n");
+    }
+  }
+
+  void avr_instrumentation_result_u16(uint16_t result) {
+    reportInteger("return", result);
+  }
+}
+
+extern "C" {
+  // The testing entry point.
+  void test();
+}
+
+int main() {
+  avrlit_initialize();
+  test();
 }

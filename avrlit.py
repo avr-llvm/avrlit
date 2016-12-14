@@ -29,6 +29,7 @@ class Config:
   mcu = ''
   port = ''
   llc = 'llc'
+  opt = 'opt'
   ld = "avr-gcc"
   programmer = 'arduino'
   output_dir = "/tmp/avrlit"
@@ -51,6 +52,14 @@ def runCommand(executable, arguments, config):
 # Build the AVRLIT support library.
 def buildAvrLit(config):
   runCommand("make", ["-s", "-C", "libavrlit"], config)
+
+# Takes an LLVM IR file and returns a path to a new IR file
+# that has had the 'avr instrumentation' pass run.
+def instrumentIR(inputIR, config):
+  outputPath = "{}/{}.instrumented.ll".format(config.output_dir, os.path.basename(inputIR))
+  runCommand(config.opt, [inputIR, "-o", outputPath, "-S", "-avr-instrument-functions"], config)
+  return outputPath
+
 
 # Compiles an LLVM IR file and returns the object file path.
 # Returns the path of the resultant object file.
@@ -83,7 +92,8 @@ def generateHex(executable, config):
 # Builds a test executable.
 # Returns the path of the generated hex file.
 def buildTestExecutable(inputIR, config):
-  objectPath = compileIR(inputIR, config)
+  instrumentedPath = instrumentIR(inputIR, config)
+  objectPath = compileIR(instrumentedPath, config)
   executablePath = link([objectPath], config)
   hexPath = generateHex(executablePath, config)
 
@@ -186,6 +196,7 @@ config = Config()
 config.port = port
 config.board = os.environ['AVRLIT_BOARD'] if 'AVRLIT_BOARD' in os.environ else 'leonardo'
 config.llc = "/Users/dylan/projects/builds/llvm/bin/llc"
+config.opt = "/Users/dylan/projects/builds/llvm/bin/opt"
 config.output_dir = "/tmp/avrlit"
 
 # Map board to MCU
