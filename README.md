@@ -1,61 +1,77 @@
 # AVR LLVM Integrated Tester
 
-This tool builds an AVR executable from test code lowered by our backend and the
+This tool builds an AVR executable from test code lowered by the LLVM backend and the
 `libavrlit` test suite library using a known good toolchain (avr-gcc). The
 resulting binary is uploaded to a development board. Test results are collected
 using a virtual tty.
 
+### Description
+
+For any testcase, we run a custom LLVM instrumentation pass. This pass lives inside
+LLVM itself, in `lib/Target/AVR/AVRInstrumentFunctions.cpp`. When this pass is run,
+it inserts calls to external hook functions directly into the executable.
+
+When the executable is linked, you must then also link object files containing
+definitions for the hook functions.
+
+We have a support library in this repository named `libavrlit`. This library
+implements the instrumented hook functions and sending all of the information
+through a serial port.
+
+The host computer can then link tests to the `libavrlit` library, run them,
+and then inspect the results.
+
 ### Setup
 
-Things you will need:
+**NOTE** This library is built as an LLVM tool. As such, you must build it alongside
+with LLVM
 
-  * ATmega32U4 board with USB and AVR-109 type bootloader. (Arduino Leonardo,
-    RedBear Blend (Micro), &c.)
+Things you will need:
+  * LLVM
+  * ATmega328p board (Arduino Uno)
+  * ~ATmega32U4 board with USB and AVR-109 type bootloader. (Arduino Leonardo,
+    RedBear Blend (Micro), &c.)~ currently broken
   * [`pySerial`](http://pyserial.sourceforge.net) python module
-  * avr-gcc
-  * avrdude
-  * GNU Make
+  * avr-gcc (for compiling the support library)
+  * avrdude (for flashing tests to the chips)
   * Fire extinguisher
 
-Set the `AVRLIT_PORT` environment variable to the tty path of your board.
+```bash
+# Grab LLVM
+git clone https://github.com/llvm-mirror/llvm.git
 
-```` bash
-> export AVRLIT_PORT=/dev/tty.usbmodemfd141
-````
+# Grab avrlit and put it inside 'llvm/tools'
+cd llvm/tools
+git clone https://github.com/avr-llvm/avrlit.git
 
-If your board currently runs an Arduino sketch that uses the serial port, you are
-all set. Otherwise, you need to reset the board manually for the first run. 
+cd ../../
 
-```` bash
-> bin/llvm-lit -v ../llvm/test/CodeGen/AVR/
+# Build LLVM
+mkdir llvm-build && cd llvm-build
+cmake ../llvm -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR
+
+# Tell AVRLIT about the board.
+export AVRLIT_BOARD=nano
+export AVRLIT_PORT=/dev/cu.usbserial-A9OFZL9T
+
+# Run all LLVM tests, including the AVR metal tests
+make check
+
+# OR alternatively, run the metal tests specifically
+./bin/llvm-lit ../llvm/test/Metal/AVR
 ```
 
 ### Writing Tests
 
-The on-target execution tests reside in `llvm/test/CodeGen/AVR`. Like other lit 
-tests they contain a `RUN: ` line calling `llvm-avrlit`:
+The on-target execution tests reside in `llvm/test/Metal/AVR`. Like other lit
+tests they contain a `RUN: ` line calling `avrlit`:
 
-```` C++
-// RUN: llvm-avrlit %s %p/add.ll 
+```llvm
+; RUN: avrlit %s
 
-#include <avrlit.h>
-
-using namespace avrlit;
-
-extern "C" {  // actually this is extern "IR" but Bjarne forgot.
-  i8 add8_reg_reg(i8, i8);
+; CHECK-LABEL: test
+define i16 @test() {
+  ; CHECK-NEXT: return 1357
+  ret i16 1357
 }
-
-AVRLIT_TEST(llvm_avr) {
-  reenter (this) {  // don't worry about the coroutine
-    plan(3);
-    ok(_(add8_reg_reg( 23, 42) ==  23 + 42)); yield;
-    ok(_(add8_reg_reg(-23, 42) == -23 + 42)); yield;
-    ok(_(add8_reg_reg(-23, 42) == 0));        yield;
-  }
-}
-````
-
-All of this is still in flux. I'll explain it if I decide to keep it. ;)
-
-
+```
