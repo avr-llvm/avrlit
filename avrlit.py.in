@@ -215,19 +215,19 @@ config.output_dir = "/tmp/avrlit"
 # Map board to MCU
 config.mcu = {
     'leonardo': 'atmega32u4',
-    'nano': 'atmega328p',
+    'uno': 'atmega328p',
 }[config.board]
 
 # Map board to programmer
 config.programmer = {
     'leonardo': 'avr109',
-    'nano': 'arduino',
+    'uno': 'arduino',
 }[config.board]
 
 # Whether we should enable the reset functionality.
 config.enableReset = {
     'leonardo': True,
-    'nano': False,
+    'uno': False,
 }[config.board]
 
 if opts.disable_reset:

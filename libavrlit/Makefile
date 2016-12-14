@@ -1,4 +1,4 @@
-BOARD := nano
+BOARD := uno
 
 all:
 	$(MAKE) -C $(BOARD)

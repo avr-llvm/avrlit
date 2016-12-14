@@ -51,7 +51,7 @@ mkdir llvm-build && cd llvm-build
 cmake ../llvm -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR
 
 # Tell AVRLIT about the board.
-export AVRLIT_BOARD=nano
+export AVRLIT_BOARD=uno
 export AVRLIT_PORT=/dev/cu.usbserial-A9OFZL9T
 
 # Run all LLVM tests, including the AVR metal tests
