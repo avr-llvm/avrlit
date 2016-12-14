@@ -67,7 +67,7 @@ The on-target execution tests reside in `llvm/test/Metal/AVR`. Like other lit
 tests they contain a `RUN: ` line calling `avrlit`:
 
 ```llvm
-; RUN: avrlit %s
+; RUN: avrlit %s | FileCheck %s
 
 ; CHECK-LABEL: test
 define i16 @test() {
