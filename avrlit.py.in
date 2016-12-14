@@ -17,8 +17,20 @@ import sys, os, textwrap, subprocess, time, serial
 from optparse import OptionParser, OptionGroup
 
 # Variables configured at build time.
-llvm_root = "@LLVM_SOURCE_DIR@"
-avrlit_dir = os.path.join(llvm_root, "utils", "AVR", "avrlit", "libavrlit")
+llvm_paths = {
+  "source": "@LLVM_SOURCE_DIR@",
+  "avrlit": "@CMAKE_CURRENT_SOURCE_DIR@",
+  "binaries": "@LLVM_TOOLS_BINARY_DIR@",
+}
+
+# If this executable wasn't built as an LLVM tool, put empty values for
+# the LLVM paths.
+for k, v in llvm_paths.items():
+  if v.startswith("@"):
+    llvm_paths[k] = None
+
+# FIXME: Rename this
+support_dir = os.path.join(llvm_paths['avrlit'], 'libavrlit')
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
 parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
@@ -28,8 +40,8 @@ class Config:
   board = ''
   mcu = ''
   port = ''
-  llc = 'llc'
-  opt = 'opt'
+  llc = os.path.join(llvm_paths["binaries"], "llc")
+  opt = os.path.join(llvm_paths["binaries"], "opt")
   ld = "avr-gcc"
   programmer = 'arduino'
   output_dir = "/tmp/avrlit"
@@ -51,7 +63,8 @@ def runCommand(executable, arguments, config):
 
 # Build the AVRLIT support library.
 def buildAvrLit(config):
-  runCommand("make", ["-s", "-C", "libavrlit"], config)
+  support_dir = os.path.join(llvm_paths['avrlit'], 'libavrlit')
+  runCommand("make", ["-s", "-C", support_dir], config)
 
 # Takes an LLVM IR file and returns a path to a new IR file
 # that has had the 'avr instrumentation' pass run.
@@ -75,9 +88,9 @@ def compileIR(inputIR, config):
 # Returns the path of the resultant executable file.
 def link(objects, config):
   executablePath = "{}/{}.elf".format(config.output_dir, "executable")
+  support_lib = os.path.join(support_dir, config.board, "libavrlit.a")
   arguments = objects + ["-mmcu=" + config.mcu,
-                        "-o", executablePath,
-                        "libavrlit/{}/libavrlit.a".format(config.board)]
+                        "-o", executablePath, support_lib]
   runCommand(config.ld, arguments, config)
   return executablePath
 
