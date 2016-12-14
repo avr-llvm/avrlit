@@ -23,8 +23,8 @@ and then inspect the results.
 
 ### Setup
 
-**NOTE** This library is built as an LLVM tool. As such, you must build it alongside
-with LLVM
+There are two ways to use this tool - from within LLVM as a testing tool, or
+standalone.
 
 Things you will need:
   * LLVM
@@ -34,7 +34,27 @@ Things you will need:
   * [`pySerial`](http://pyserial.sourceforge.net) python module
   * avr-gcc (for compiling the support library)
   * avrdude (for flashing tests to the chips)
-  * Fire extinguisher
+ llvm_paths["binaries"],  * Fire extinguisher
+
+Before tests are run, you need to tell AVRLIT about your board
+
+```bash
+# Tell AVRLIT about the board.
+export AVRLIT_BOARD=uno
+export AVRLIT_PORT=/dev/cu.usbserial-A9OFZL9T
+```
+
+### Running standalone
+
+```bash
+# Compile and upload a test, print only the test output to standard out.
+avrlit.py.in ~/tests/avr/test.ll
+
+# Verbose mode
+avrlit.py.in ~/tests/avr/test.ll -v
+```
+
+### Running from within LLVM
 
 ```bash
 # Grab LLVM
@@ -49,10 +69,6 @@ cd ../../
 # Build LLVM
 mkdir llvm-build && cd llvm-build
 cmake ../llvm -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR
-
-# Tell AVRLIT about the board.
-export AVRLIT_BOARD=uno
-export AVRLIT_PORT=/dev/cu.usbserial-A9OFZL9T
 
 # Run all LLVM tests, including the AVR metal tests
 make check
