@@ -22,6 +22,7 @@ avrlit_dir = os.path.join(llvm_root, "utils", "AVR", "avrlit", "libavrlit")
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
 parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
+parser.add_option("-v", "--verbose", action="store_true", help = "Enable verbose logging to stderr")
 
 class Config:
   board = ''
@@ -32,16 +33,24 @@ class Config:
   programmer = 'arduino'
   output_dir = "/tmp/avrlit"
   enableReset = True
+  verbose = False
 
 #=== Build Test Executable ------------------------------------------------===#
 
-def runCommand(executable, arguments):
-  print("{} {}".format(executable, " ".join(arguments)))
-  subprocess.check_call([executable] + arguments)
+def runCommand(executable, arguments, config):
+  if config.verbose:
+    sys.stderr.write("{} {}\n".format(executable, " ".join(arguments)))
+
+  if config.verbose:
+    stderr = subprocess.STDOUT
+  else:
+    stderr = open(os.devnull, 'w')
+
+  subprocess.check_call([executable] + arguments, stderr=stderr)
 
 # Build the AVRLIT support library.
-def buildAvrLit():
-  runCommand("make", ["-C", "libavrlit"])
+def buildAvrLit(config):
+  runCommand("make", ["-s", "-C", "libavrlit"], config)
 
 # Compiles an LLVM IR file and returns the object file path.
 # Returns the path of the resultant object file.
@@ -50,7 +59,7 @@ def compileIR(inputIR, config):
   arguments = ["-mtriple=avr-atmel-none", "-mcpu", config.mcu,
               "-filetype=obj", inputIR, "-o", objectPath]
 
-  runCommand(config.llc, arguments)
+  runCommand(config.llc, arguments, config)
   return objectPath
 
 # Links a set of objects together into an ELF executable.
@@ -60,7 +69,7 @@ def link(objects, config):
   arguments = objects + ["-mmcu=" + config.mcu,
                         "-o", executablePath,
                         "libavrlit/{}/libavrlit.a".format(config.board)]
-  runCommand(config.ld, arguments)
+  runCommand(config.ld, arguments, config)
   return executablePath
 
 # Generates a Hex file from an executable.
@@ -68,7 +77,7 @@ def link(objects, config):
 def generateHex(executable, config):
   hexPath = "{}/{}.hex".format(config.output_dir, os.path.basename(executable))
   arguments = ["-j", ".text", "-j", ".data", "-O", "ihex", executable, hexPath]
-  runCommand("avr-objcopy", arguments)
+  runCommand("avr-objcopy", arguments, config)
   return hexPath
 
 # Builds a test executable.
@@ -111,15 +120,14 @@ def upload(executable, config):
   waitUntilPortExists(config.port)
   runCommand("avrdude", ['-p' + config.mcu, '-c' + config.programmer,
                          '-P', config.port, '-b57600',
-                         '-D', '-Uflash:w:{}:i'.format(executable)])
+                         '-D', '-Uflash:w:{}:i'.format(executable)], config)
 
   if config.enableReset:
       waitWhilePortExists(port)
 
 #=== Run Executable -------------------------------------------------------===#
 
-def runExecutable(executable, config):
-  upload(executable, config)
+def waitForSerialReady(config):
   waitUntilPortExists(config.port)
   retries = 0
   while True:
@@ -131,22 +139,36 @@ def runExecutable(executable, config):
       retries += 1
       if retries == 5:
         raise
+  return test
 
-  done = False
-  passed = True
+# Runs an executable.
+# Returns an error message if there was a problem.
+def runExecutable(executable, config):
+  upload(executable, config)
+  stream = waitForSerialReady(config)
+
+  error = None
   timeouts = 0
-  while not done:
-    line = test.readline().strip()
+  lines_read = 0
+
+  while not error:
+    line = stream.readline().strip()
+
     if not line:
       timeouts += 1
       if timeouts == 2:
-        print("FAIL: Test hangs.")
-        passed = False
-        done = True
+        if lines_read == 0:
+          error = "device did not respond quick enough"
+        else:
+          break # The test must've completed.
       continue
+
+    lines_read += 1
     print(line)
-  test.close()
-  return passed
+
+  stream.close()
+
+  return error
 
 #=== Main -----------------------------------------------------------------===#
 
@@ -178,17 +200,30 @@ config.programmer = {
     'nano': 'arduino',
 }[config.board]
 
+# Whether we should enable the reset functionality.
+config.enableReset = {
+    'leonardo': True,
+    'nano': False,
+}[config.board]
+
 if opts.disable_reset:
   config.enableReset = False
   print "disabling serial reset"
+
+if opts.verbose:
+    config.verbose = True
 
 # Ensure the output directory exists.
 if not os.path.exists(config.output_dir):
     os.makedirs(config.output_dir)
 
 # Build the AVRLIT support library
-buildAvrLit()
+buildAvrLit(config)
 
 for file in files:
   executable = buildTestExecutable(file, config)
-  runExecutable(executable, config)
+  error_msg = runExecutable(executable, config)
+
+  if error_msg:
+    sys.stderr.write("error: {}".format(error_msg))
+    sys.exit(1)

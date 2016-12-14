@@ -30,7 +30,12 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 
 extern "C" {
-  void InitializeAVRLit();
+  void avrlit_initialize();
+
+  void avrlit_send_byte(uint8_t byte);
+  uint8_t avrlit_receive_byte();
+
+  void avrlit_report_result_u8(const char *name, uint8_t result);
 }
 
 // namespace avrlit {
