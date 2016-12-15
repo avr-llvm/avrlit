@@ -46,12 +46,25 @@ parser.add_option("--llvm-root", dest="llvm_root",
                   help="use LLVM tools from a given directory", metavar="LLVM_ROOT")
 parser.add_option("-v", "--verbose", action="store_true", help = "Enable verbose logging to stderr")
 
+def searchForLLVMRoot():
+  if 'PATH' in os.environ:
+    for dir in os.environ['PATH'].split(os.pathsep):
+      if './bin' in dir:
+        return dir
+
 class Config:
   def __init__(self, llvm_root):
     if not llvm_root:
       if 'LLVM_ROOT' in os.environ:
         llvm_root = os.environ['LLVM_ROOT']
       else:
+        llvm_root = searchForLLVMRoot()
+
+        if llvm_root:
+          sys.stderr.write("inferred LLVM root: {}\n".format(llvm_root))
+
+      # Use the system LLVM
+      if not llvm_root:
         sys.stderr.write("--llvm-root argument or LLVM_ROOT env var not specified, using system LLVM\n")
         llvm_root = ""
 
@@ -285,6 +298,7 @@ if not os.path.exists(config.output_dir):
 buildAvrLitLibrary(config)
 
 for file in files:
+  next
   executable = buildTestExecutable(file, config)
   error_msg = runExecutable(executable, config)
 
