@@ -79,10 +79,14 @@ extern "C" {
   void avr_instrumentation_argument_i32(const char *argName, uint8_t idx, uint32_t val) { reportArgumentInteger(argName, idx, val); }
   void avr_instrumentation_argument_i64(const char *argName, uint8_t idx, uint64_t val) { reportArgumentInteger(argName, idx, val); }
 
-  void avr_instrumentation_result_u8(uint8_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_u16(uint16_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_u32(uint32_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_u64(uint64_t result) { reportResultInteger(result); }
+  void avr_instrumentation_argument_f32(const char *argName, uint8_t idx, float val) { }
+
+  void avr_instrumentation_result_i8(uint8_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_i16(uint16_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_i32(uint32_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_i64(uint64_t result) { reportResultInteger(result); }
+
+  void avr_instrumentation_result_f32(float result) {  }
 }
 
 extern "C" {
