@@ -49,7 +49,11 @@ parser.add_option("-v", "--verbose", action="store_true", help = "Enable verbose
 class Config:
   def __init__(self, llvm_root):
     if not llvm_root:
-      llvm_root = ""
+      if 'LLVM_ROOT' in os.environ:
+        llvm_root = os.environ['LLVM_ROOT']
+      else:
+        sys.stderr.write("--llvm-root argument or LLVM_ROOT env var not specified, using system LLVM\n")
+        llvm_root = ""
 
     self.board = ''
     self.mcu = ''
