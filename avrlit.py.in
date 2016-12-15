@@ -42,20 +42,26 @@ llvm_binary_dir = llvm_paths["binaries"] or "/Users/dylan/projects/builds/llvm/b
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
 parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
+parser.add_option("--llvm-root", dest="llvm_root",
+                  help="use LLVM tools from a given directory", metavar="LLVM_ROOT")
 parser.add_option("-v", "--verbose", action="store_true", help = "Enable verbose logging to stderr")
 
 class Config:
-  board = ''
-  mcu = ''
-  port = ''
-  llc = os.path.join(llvm_binary_dir, "llc")
-  opt = os.path.join(llvm_binary_dir, "opt")
-  clang = os.path.join(llvm_binary_dir, "clang")
-  ld = "avr-gcc"
-  programmer = 'arduino'
-  output_dir = "/tmp/avrlit"
-  enableReset = True
-  verbose = False
+  def __init__(self, llvm_root):
+    if not llvm_root:
+      llvm_root = ""
+
+    self.board = ''
+    self.mcu = ''
+    self.port = ''
+    self.llc = os.path.join(llvm_root, "llc")
+    self.opt = os.path.join(llvm_root, "opt")
+    self.clang = os.path.join(llvm_root, "clang")
+    self.ld = "avr-gcc"
+    self.programmer = 'arduino'
+    self.output_dir = "/tmp/avrlit"
+    self.enableReset = True
+    self.verbose = False
 
 #=== Build Test Executable ------------------------------------------------===#
 
@@ -224,6 +230,7 @@ def runExecutable(executable, config):
 #=== Main -----------------------------------------------------------------===#
 
 (opts, files) = parser.parse_args()
+
 if not 'AVRLIT_PORT' in os.environ:
   print('AVRLIT_PORT environment variable is not set')
   exit(1)
@@ -233,7 +240,7 @@ if not os.path.exists(port):
   print('AVRLIT_PORT \'{}\' does not exist'.format(port))
   exit(1)
 
-config = Config()
+config = Config(llvm_root = opts.llvm_root)
 config.port = port
 config.board = os.environ['AVRLIT_BOARD'] if 'AVRLIT_BOARD' in os.environ else 'leonardo'
 config.output_dir = "/tmp/avrlit"
