@@ -49,7 +49,7 @@ extern "C" {
   }
 
   void avrlit_end() {
-    avrlit::SerialImpl::GetCurrent()->send("END");
+    avrlit::SerialImpl::GetCurrent()->send((uint8_t)'\0');
   }
 
   void avrlit_send_byte(uint8_t byte) {

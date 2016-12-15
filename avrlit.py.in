@@ -247,6 +247,9 @@ def runExecutable(executable, config):
           break # The test must've completed.
       continue
 
+    if line and b'\x00' in line:
+      break # A null byte indicates the end of tests.
+
     lines_read += 1
     print(line)
 
