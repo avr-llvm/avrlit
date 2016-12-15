@@ -15,9 +15,11 @@
 namespace {
 
 template<typename T>
-void reportInteger(const char *name, T result) {
+void reportInteger(const char *name, T result, bool includeColon) {
   avrlit::SerialImpl::GetCurrent()->send(name);
-  avrlit::SerialImpl::GetCurrent()->send(": ");
+
+  if (includeColon)
+    avrlit::SerialImpl::GetCurrent()->send(": ");
 
   char buffer[20];
   ltoa(result, buffer, 10);
@@ -25,11 +27,29 @@ void reportInteger(const char *name, T result) {
   avrlit::SerialImpl::GetCurrent()->send(buffer);
 }
 
+template<typename T>
+void reportArgumentInteger(const char *name, uint8_t idx, T result) {
+  if (idx > 0) {
+    avrlit::SerialImpl::GetCurrent()->send(", ");
+  }
+
+  reportInteger(name, result, true);
+}
+
+template<typename T>
+void reportResultInteger(T result) {
+  reportInteger("return ", result, false);
+  avrlit::SerialImpl::GetCurrent()->send('\n');
+}
 }
 
 extern "C" {
-  void avrlit_initialize() {
+  void avrlit_start() {
     avrlit::SerialImpl::Initialize();
+  }
+
+  void avrlit_end() {
+    avrlit::SerialImpl::GetCurrent()->send("END");
   }
 
   void avrlit_send_byte(uint8_t byte) {
@@ -47,22 +67,22 @@ extern "C" {
   void avr_instrumentation_begin_signature(const char *funcName, uint16_t argCount) {
     avrlit::SerialImpl::GetCurrent()->send(funcName);
 
-    if (argCount == 0) {
-      avrlit::SerialImpl::GetCurrent()->send("()\n");
-    } else {
-      avrlit::SerialImpl::GetCurrent()->send("(\n");
-    }
+    avrlit::SerialImpl::GetCurrent()->send("(");
   }
 
   void avr_instrumentation_end_signature(const char *funcName, uint16_t argCount) {
-    if (argCount != 0) {
-      avrlit::SerialImpl::GetCurrent()->send(")\n");
-    }
+    avrlit::SerialImpl::GetCurrent()->send(")\n");
   }
 
-  void avr_instrumentation_result_u16(uint16_t result) {
-    reportInteger("return", result);
-  }
+  void avr_instrumentation_argument_i8(const char *argName, uint8_t idx, uint8_t val) { reportArgumentInteger(argName, idx, val); }
+  void avr_instrumentation_argument_i16(const char *argName, uint8_t idx, uint16_t val) { reportArgumentInteger(argName, idx, val); }
+  void avr_instrumentation_argument_i32(const char *argName, uint8_t idx, uint32_t val) { reportArgumentInteger(argName, idx, val); }
+  void avr_instrumentation_argument_i64(const char *argName, uint8_t idx, uint64_t val) { reportArgumentInteger(argName, idx, val); }
+
+  void avr_instrumentation_result_u8(uint8_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_u16(uint16_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_u32(uint32_t result) { reportResultInteger(result); }
+  void avr_instrumentation_result_u64(uint64_t result) { reportResultInteger(result); }
 }
 
 extern "C" {
@@ -71,6 +91,9 @@ extern "C" {
 }
 
 int main() {
-  avrlit_initialize();
+  avrlit_start();
   test();
+  avrlit_end();
+
+  return 0;
 }
