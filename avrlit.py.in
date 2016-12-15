@@ -41,6 +41,7 @@ libavrlit_dir = os.path.join(avrlit_dir, 'libavrlit')
 llvm_binary_dir = llvm_paths["binaries"] or "/Users/dylan/projects/builds/llvm/bin"
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
+parser.add_option("-c", "--compile-only", action="store_true", help = "Don't run the tests")
 parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
 parser.add_option("--llvm-root", dest="llvm_root",
                   help="use LLVM tools from a given directory", metavar="LLVM_ROOT")
@@ -308,8 +309,11 @@ if not os.path.exists(config.output_dir):
 buildAvrLitLibrary(config)
 
 for file in files:
-  next
   executable = buildTestExecutable(file, config)
+
+  if opts.compile_only:
+    continue
+
   error_msg = runExecutable(executable, config)
 
   if error_msg:
