@@ -84,15 +84,22 @@ class Config:
 #=== Build Test Executable ------------------------------------------------===#
 
 def runCommand(executable, arguments, config):
-  if config.verbose:
-    sys.stderr.write("{} {}\n".format(executable, " ".join(arguments)))
+  full_command = "{} {}".format(executable, " ".join(arguments))
 
   if config.verbose:
-    stderr = subprocess.STDOUT
-  else:
-    stderr = open(os.devnull, 'w')
+    sys.stderr.write(full_command + "\n")
 
-  subprocess.check_call([executable] + arguments, stderr=stderr)
+  output = None
+  try:
+    output = subprocess.check_output([executable] + arguments, stderr=subprocess.STDOUT)
+  except subprocess.CalledProcessError, e:
+    sys.stderr.write("error: {}\n".format(full_command))
+    sys.stderr.write("returned {}\n\n".format(e.returncode))
+    sys.stderr.write(e.output)
+    exit(1)
+
+  if config.verbose:
+    sys.stderr.write(output)
 
 # Build the AVRLIT support library.
 def buildAvrLitLibrary(config):
