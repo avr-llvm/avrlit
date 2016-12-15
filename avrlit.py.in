@@ -61,6 +61,7 @@ class Config:
     self.llc = os.path.join(llvm_root, "llc")
     self.opt = os.path.join(llvm_root, "opt")
     self.clang = os.path.join(llvm_root, "clang")
+    self.clangxx = os.path.join(llvm_root, "clang++")
     self.ld = "avr-gcc"
     self.programmer = 'arduino'
     self.output_dir = "/tmp/avrlit"
@@ -85,19 +86,21 @@ def buildAvrLitLibrary(config):
   runCommand("make", ["-s", "-C", libavrlit_dir], config)
 
 # Compile a C file to an IR file.
-def compileC(inputFile, config):
+def compileWithClang(clangExe, inputFile, config):
   outputPath = "{}/{}.ll".format(config.output_dir, os.path.basename(inputFile))
-  runCommand(config.clang, ["-c", inputFile, "-o", outputPath, "-S", "-emit-llvm"], config)
+  runCommand(clangExe, ["-c", inputFile, "-o", outputPath, "-S", "-emit-llvm"], config)
   return outputPath
 
 # Generate an LLVM IR file.
 def generateIR(inputFile, config):
   extension = os.path.splitext(inputFile)[1]
 
-  if extension == ".ll":
+  if extension in [".ll", ".mir"]: # Files which llc handles natively.
     return inputFile
   elif extension == ".c":
-    return compileC(inputFile, config)
+    return compileWithClang(config.clang, inputFile, config)
+  elif extension in [".c", ".cpp", ".cxx"]:
+    return compileWithClang(config.clangxx, inputFile, config)
   else:
     sys.stderr.write("don't know how to compile files with '{}' extension".format(extension))
     exit(1)
