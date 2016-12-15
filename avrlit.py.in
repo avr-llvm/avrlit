@@ -38,7 +38,7 @@ libavrlit_dir = os.path.join(avrlit_dir, 'libavrlit')
 
 # Where the LLVM tools are located.
 # If this is an empty string, the system llvm tools are used.
-llvm_binary_dir = llvm_paths["binaries"] or ""
+llvm_binary_dir = llvm_paths["binaries"] or "/Users/dylan/projects/builds/llvm/bin"
 
 parser = OptionParser("usage: %prog [options] {ll-and-cpp-files}...")
 parser.add_option("--disable-reset", action="store_true", help = "Disable reset")
@@ -50,6 +50,7 @@ class Config:
   port = ''
   llc = os.path.join(llvm_binary_dir, "llc")
   opt = os.path.join(llvm_binary_dir, "opt")
+  clang = os.path.join(llvm_binary_dir, "clang")
   ld = "avr-gcc"
   programmer = 'arduino'
   output_dir = "/tmp/avrlit"
@@ -72,6 +73,25 @@ def runCommand(executable, arguments, config):
 # Build the AVRLIT support library.
 def buildAvrLitLibrary(config):
   runCommand("make", ["-s", "-C", libavrlit_dir], config)
+
+# Compile a C file to an IR file.
+def compileC(inputFile, config):
+  outputPath = "{}/{}.ll".format(config.output_dir, os.path.basename(inputFile))
+  runCommand(config.clang, ["-c", inputFile, "-o", outputPath, "-S", "-emit-llvm"], config)
+  return outputPath
+
+# Generate an LLVM IR file.
+def generateIR(inputFile, config):
+  extension = os.path.splitext(inputFile)[1]
+
+  if extension == ".ll":
+    return inputFile
+  elif extension == ".c":
+    return compileC(inputFile, config)
+  else:
+    sys.stderr.write("don't know how to compile files with '{}' extension".format(extension))
+    exit(1)
+
 
 # Takes an LLVM IR file and returns a path to a new IR file
 # that has had the 'avr instrumentation' pass run.
@@ -111,8 +131,9 @@ def generateHex(executable, config):
 
 # Builds a test executable.
 # Returns the path of the generated hex file.
-def buildTestExecutable(inputIR, config):
-  instrumentedPath = instrumentIR(inputIR, config)
+def buildTestExecutable(inputFile, config):
+  irPath = generateIR(inputFile, config)
+  instrumentedPath = instrumentIR(irPath, config)
   objectPath = compileIR(instrumentedPath, config)
   executablePath = link([objectPath], config)
   hexPath = generateHex(executablePath, config)
@@ -215,8 +236,6 @@ if not os.path.exists(port):
 config = Config()
 config.port = port
 config.board = os.environ['AVRLIT_BOARD'] if 'AVRLIT_BOARD' in os.environ else 'leonardo'
-config.llc = "/Users/dylan/projects/builds/llvm/bin/llc"
-config.opt = "/Users/dylan/projects/builds/llvm/bin/opt"
 config.output_dir = "/tmp/avrlit"
 
 # Map board to MCU
