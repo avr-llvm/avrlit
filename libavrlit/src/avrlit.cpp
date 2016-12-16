@@ -15,56 +15,61 @@
 
 namespace {
 
+
 template<typename T>
-void reportInteger(const char *name, T result, bool includeColon) {
-  avrlit::SerialImpl::GetCurrent()->send(name);
+void print(T value);
 
-  if (includeColon)
-    avrlit::SerialImpl::GetCurrent()->send(": ");
-
+template<typename T>
+void printInteger(T val) {
   char buffer[20];
-  ltoa(result, buffer, 10);
+  ltoa(val, buffer, 10);
 
   avrlit::SerialImpl::GetCurrent()->send(buffer);
 }
 
-void reportFloat(const char *name, float f, bool includeColon) {
-  avrlit::SerialImpl::GetCurrent()->send(name);
+template<> void print(uint8_t val) { printInteger(val); }
+template<> void print(uint16_t val) { printInteger(val); }
+template<> void print(uint32_t val) { printInteger(val); }
+template<> void print(uint64_t val) { printInteger(val); }
 
-  if (includeColon)
-    avrlit::SerialImpl::GetCurrent()->send(": ");
-
+template<>
+void print(float val) {
   char buffer[40];
-  sprintf(buffer, "%f", (double)f);
+  sprintf(buffer, "%f", (double)val);
 
   avrlit::SerialImpl::GetCurrent()->send(buffer);
 }
 
 template<typename T>
-void reportArgumentInteger(const char *name, uint8_t idx, T result) {
-  if (idx > 0) {
+void reportArgument(const char *name, uint8_t idx, T result) {
+  if (idx > 0)
     avrlit::SerialImpl::GetCurrent()->send(", ");
-  }
 
-  reportInteger(name, result, true);
-}
-void reportArgumentFloat(const char *name, uint8_t idx, float result) {
-  if (idx > 0) {
-    avrlit::SerialImpl::GetCurrent()->send(", ");
-  }
+  avrlit::SerialImpl::GetCurrent()->send(name);
+  avrlit::SerialImpl::GetCurrent()->send(": ");
 
-  reportFloat(name, result, true);
+  print(result);
 }
 
 template<typename T>
-void reportResultInteger(T result) {
-  reportInteger("return ", result, false);
+void reportResult(T result) {
+  avrlit::SerialImpl::GetCurrent()->send("return ");
+  print(result);
   avrlit::SerialImpl::GetCurrent()->send('\n');
 }
 
-void reportResultFloat(float result) {
-  reportFloat("return ", result, false);
-  avrlit::SerialImpl::GetCurrent()->send('\n');
+template<typename A, typename B>
+void reportAssertionError(A a, B b) {
+  avrlit::SerialImpl::GetCurrent()->send("assertion error: ");
+
+  avrlit::SerialImpl::GetCurrent()->send("'");
+  print(a);
+  avrlit::SerialImpl::GetCurrent()->send("' != '");
+  print(b);
+  avrlit::SerialImpl::GetCurrent()->send("'\n");
+
+  asm("cli");
+  while(1) { }
 }
 }
 
@@ -99,19 +104,17 @@ extern "C" {
     avrlit::SerialImpl::GetCurrent()->send(")\n");
   }
 
-  void avr_instrumentation_argument_i8(const char *argName, uint8_t idx, uint8_t val) { reportArgumentInteger(argName, idx, val); }
-  void avr_instrumentation_argument_i16(const char *argName, uint8_t idx, uint16_t val) { reportArgumentInteger(argName, idx, val); }
-  void avr_instrumentation_argument_i32(const char *argName, uint8_t idx, uint32_t val) { reportArgumentInteger(argName, idx, val); }
-  void avr_instrumentation_argument_i64(const char *argName, uint8_t idx, uint64_t val) { reportArgumentInteger(argName, idx, val); }
+  void avr_instrumentation_argument_i8(const char *argName, uint8_t idx, uint8_t val) { reportArgument(argName, idx, val); }
+  void avr_instrumentation_argument_i16(const char *argName, uint8_t idx, uint16_t val) { reportArgument(argName, idx, val); }
+  void avr_instrumentation_argument_i32(const char *argName, uint8_t idx, uint32_t val) { reportArgument(argName, idx, val); }
+  void avr_instrumentation_argument_i64(const char *argName, uint8_t idx, uint64_t val) { reportArgument(argName, idx, val); }
+  void avr_instrumentation_argument_f32(const char *argName, uint8_t idx, float val) { reportArgument(argName, idx, val); }
 
-  void avr_instrumentation_argument_f32(const char *argName, uint8_t idx, float val) { reportArgumentFloat(argName, idx, val); }
-
-  void avr_instrumentation_result_i8(uint8_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_i16(uint16_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_i32(uint32_t result) { reportResultInteger(result); }
-  void avr_instrumentation_result_i64(uint64_t result) { reportResultInteger(result); }
-
-  void avr_instrumentation_result_f32(float result) { reportResultFloat(result); }
+  void avr_instrumentation_result_i8(uint8_t result) { reportResult(result); }
+  void avr_instrumentation_result_i16(uint16_t result) { reportResult(result); }
+  void avr_instrumentation_result_i32(uint32_t result) { reportResult(result); }
+  void avr_instrumentation_result_i64(uint64_t result) { reportResult(result); }
+  void avr_instrumentation_result_f32(float result) { reportResult(result); }
 }
 
 extern "C" {
