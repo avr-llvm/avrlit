@@ -151,7 +151,8 @@ def link(objects, config):
   executablePath = "{}/{}.elf".format(config.output_dir, "executable")
   libavrlit_path = os.path.join(libavrlit_dir, config.board, "libavrlit.a")
   arguments = objects + ["-mmcu=" + config.mcu,
-                        "-o", executablePath, libavrlit_path]
+                        "-o", executablePath, libavrlit_path,
+                        "-Wl,-u,vfprintf", "-lprintf_flt", "-lm"]
   runCommand(config.ld, arguments, config)
   return executablePath
 

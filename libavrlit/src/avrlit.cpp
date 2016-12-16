@@ -11,6 +11,7 @@
 #include "serial/serial.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 namespace {
 
@@ -27,6 +28,18 @@ void reportInteger(const char *name, T result, bool includeColon) {
   avrlit::SerialImpl::GetCurrent()->send(buffer);
 }
 
+void reportFloat(const char *name, float f, bool includeColon) {
+  avrlit::SerialImpl::GetCurrent()->send(name);
+
+  if (includeColon)
+    avrlit::SerialImpl::GetCurrent()->send(": ");
+
+  char buffer[40];
+  sprintf(buffer, "%f", (double)f);
+
+  avrlit::SerialImpl::GetCurrent()->send(buffer);
+}
+
 template<typename T>
 void reportArgumentInteger(const char *name, uint8_t idx, T result) {
   if (idx > 0) {
@@ -35,10 +48,22 @@ void reportArgumentInteger(const char *name, uint8_t idx, T result) {
 
   reportInteger(name, result, true);
 }
+void reportArgumentFloat(const char *name, uint8_t idx, float result) {
+  if (idx > 0) {
+    avrlit::SerialImpl::GetCurrent()->send(", ");
+  }
+
+  reportFloat(name, result, true);
+}
 
 template<typename T>
 void reportResultInteger(T result) {
   reportInteger("return ", result, false);
+  avrlit::SerialImpl::GetCurrent()->send('\n');
+}
+
+void reportResultFloat(float result) {
+  reportFloat("return ", result, false);
   avrlit::SerialImpl::GetCurrent()->send('\n');
 }
 }
@@ -79,14 +104,14 @@ extern "C" {
   void avr_instrumentation_argument_i32(const char *argName, uint8_t idx, uint32_t val) { reportArgumentInteger(argName, idx, val); }
   void avr_instrumentation_argument_i64(const char *argName, uint8_t idx, uint64_t val) { reportArgumentInteger(argName, idx, val); }
 
-  void avr_instrumentation_argument_f32(const char *argName, uint8_t idx, float val) { }
+  void avr_instrumentation_argument_f32(const char *argName, uint8_t idx, float val) { reportArgumentFloat(argName, idx, val); }
 
   void avr_instrumentation_result_i8(uint8_t result) { reportResultInteger(result); }
   void avr_instrumentation_result_i16(uint16_t result) { reportResultInteger(result); }
   void avr_instrumentation_result_i32(uint32_t result) { reportResultInteger(result); }
   void avr_instrumentation_result_i64(uint64_t result) { reportResultInteger(result); }
 
-  void avr_instrumentation_result_f32(float result) {  }
+  void avr_instrumentation_result_f32(float result) { reportResultFloat(result); }
 }
 
 extern "C" {
